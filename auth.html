@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="OwnIt - Connexion sécurisée avec authentification 2FA">
+    <title>OwnIt - Connexion Sécurisée</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&family=Inter:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="styles/design-system.css">
+    <link rel="stylesheet" href="styles/auth.css">
+</head>
+
+<body class="auth-body">
+    <!-- Split Screen Layout -->
+    <div class="auth-container">
+        <!-- Left Side: Branding -->
+        <div class="auth-branding">
+            <div class="branding-content">
+                <h1 class="brand-logo">OwnIt</h1>
+                <p class="brand-tagline">Votre Histoire Professionnelle</p>
+
+                <div class="brand-features">
+                    <div class="feature-item">
+                        <div class="feature-icon">🎤</div>
+                        <h3>Voice-First</h3>
+                        <p>Racontez votre histoire avec votre voix</p>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🔒</div>
+                        <h3>Sécurité Maximale</h3>
+                        <p>Protection 2FA et chiffrement de bout en bout</p>
+                    </div>
+                    <div class="feature-item">
+                        <div class="feature-icon">🌍</div>
+                        <h3>Pour Tous</h3>
+                        <p>Accessible même sans savoir lire ou écrire</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Authentication Forms -->
+        <div class="auth-forms">
+            <!-- Login Form -->
+            <div class="auth-form-container active" id="login-form">
+                <div class="auth-header">
+                    <h2 class="auth-title">Bienvenue</h2>
+                    <p class="auth-subtitle">Connectez-vous à votre compte</p>
+                </div>
+
+                <form class="auth-form" id="login-form-element">
+                    <div class="form-group">
+                        <label for="login-email">Email</label>
+                        <input type="email" id="login-email" class="form-input" placeholder="votre@email.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="login-password">Mot de passe</label>
+                        <div class="password-input-group">
+                            <input type="password" id="login-password" class="form-input" placeholder="••••••••"
+                                required>
+                            <button type="button" class="password-toggle" aria-label="Afficher le mot de passe">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <path
+                                        d="M12 4.5C7 4.5 2.73 7.61 1 12C2.73 16.39 7 19.5 12 19.5C17 19.5 21.27 16.39 23 12C21.27 7.61 17 4.5 12 4.5ZM12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12C17 14.76 14.76 17 12 17ZM12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9Z"
+                                        fill="currentColor" />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="remember-me">
+                            <span>Se souvenir de moi</span>
+                        </label>
+                        <a href="#forgot-password" class="link-text">Mot de passe oublié ?</a>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-large">
+                        Se connecter
+                    </button>
+
+                    <div class="divider">
+                        <span>OU</span>
+                    </div>
+
+                    <button type="button" class="btn btn-voice" id="voice-login-btn">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M12 15C13.66 15 15 13.66 15 12V6C15 4.34 13.66 3 12 3C10.34 3 9 4.34 9 6V12C9 13.66 10.34 15 12 15Z"
+                                fill="currentColor" />
+                            <path
+                                d="M17 11C17 13.76 14.76 16 12 16C9.24 16 7 13.76 7 11H5C5 14.53 7.61 17.43 11 17.92V21H13V17.92C16.39 17.43 19 14.53 19 11H17Z"
+                                fill="currentColor" />
+                        </svg>
+                        Connexion par voix
+                    </button>
+
+                    <button type="button" class="btn btn-biometric" id="biometric-btn">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M12 1C8.68 1 6 3.68 6 7C6 10.32 8.68 13 12 13C15.32 13 18 10.32 18 7C18 3.68 15.32 1 12 1ZM12 11C9.79 11 8 9.21 8 7C8 4.79 9.79 3 12 3C14.21 3 16 4.79 16 7C16 9.21 14.21 11 12 11ZM12 15C8.67 15 2 16.67 2 20V23H22V20C22 16.67 15.33 15 12 15ZM4 21C4.22 19.28 8.71 17 12 17C15.29 17 19.78 19.28 20 21H4Z"
+                                fill="currentColor" />
+                        </svg>
+                        Face ID / Empreinte
+                    </button>
+                </form>
+
+                <p class="auth-switch">
+                    Pas encore de compte ?
+                    <a href="#" class="link-text" id="switch-to-signup">S'inscrire</a>
+                </p>
+            </div>
+
+            <!-- Signup Form -->
+            <div class="auth-form-container" id="signup-form">
+                <div class="auth-header">
+                    <h2 class="auth-title">Créer un compte</h2>
+                    <p class="auth-subtitle">Rejoignez OwnIt en quelques minutes</p>
+                </div>
+
+                <form class="auth-form" id="signup-form-element">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="signup-firstname">Prénom</label>
+                            <input type="text" id="signup-firstname" class="form-input" placeholder="Jean" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="signup-lastname">Nom</label>
+                            <input type="text" id="signup-lastname" class="form-input" placeholder="Dupont" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="signup-email">Email</label>
+                        <input type="email" id="signup-email" class="form-input" placeholder="votre@email.com" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="signup-password">Mot de passe</label>
+                        <div class="password-input-group">
+                            <input type="password" id="signup-password" class="form-input"
+                                placeholder="Minimum 12 caractères" required>
+                            <button type="button" class="password-toggle" aria-label="Afficher le mot de passe">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                                    <path
+                                        d="M12 4.5C7 4.5 2.73 7.61 1 12C2.73 16.39 7 19.5 12 19.5C17 19.5 21.27 16.39 23 12C21.27 7.61 17 4.5 12 4.5ZM12 17C9.24 17 7 14.76 7 12C7 9.24 9.24 7 12 7C14.76 7 17 9.24 17 12C17 14.76 14.76 17 12 17ZM12 9C10.34 9 9 10.34 9 12C9 13.66 10.34 15 12 15C13.66 15 15 13.66 15 12C15 10.34 13.66 9 12 9Z"
+                                        fill="currentColor" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="password-strength" id="password-strength">
+                            <div class="strength-bar">
+                                <div class="strength-fill"></div>
+                            </div>
+                            <span class="strength-text">Force: Faible</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="signup-profession">Profession</label>
+                        <input type="text" id="signup-profession" class="form-input"
+                            placeholder="Ex: Maçon, Couturière, Chauffeur" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="terms-accept" required>
+                            <span>J'accepte les <a href="#" class="link-text">conditions d'utilisation</a> et la <a
+                                    href="#" class="link-text">politique de confidentialité</a></span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-large">
+                        Créer mon compte
+                    </button>
+
+                    <div class="divider">
+                        <span>OU</span>
+                    </div>
+
+                    <button type="button" class="btn btn-voice" id="voice-signup-btn">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                            <path
+                                d="M12 15C13.66 15 15 13.66 15 12V6C15 4.34 13.66 3 12 3C10.34 3 9 4.34 9 6V12C9 13.66 10.34 15 12 15Z"
+                                fill="currentColor" />
+                        </svg>
+                        Inscription par voix
+                    </button>
+                </form>
+
+                <p class="auth-switch">
+                    Déjà un compte ?
+                    <a href="#" class="link-text" id="switch-to-login">Se connecter</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+        <div class="spinner"></div>
+        <p>Connexion sécurisée en cours...</p>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="scripts/utils.js"></script>
+    <script src="scripts/security.js"></script>
+    <script src="scripts/2fa.js"></script>
+    <script src="scripts/auth.js"></script>
+</body>
+
+</html>
