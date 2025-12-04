@@ -4,7 +4,7 @@
 
 const Profile = {
     audioPlayer: null,
-    experiencePlayerssection: [],
+    experiencePlayers: [],
 
     render(container) {
         const user = MockData.currentUser;
