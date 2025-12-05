@@ -134,14 +134,43 @@ class AuthManager {
                 throw new Error('Veuillez remplir tous les champs');
             }
 
-            // Simulate login (in production, this would be an API call)
-            await this.simulateLoginAPI(email, password);
+            // Real Supabase authentication
+            const { data, error } = await window.supabaseClient.auth.signInWithPassword({
+                email,
+                password
+            });
+
+            if (error) {
+                throw new Error(error.message === 'Invalid login credentials'
+                    ? 'Email ou mot de passe incorrect'
+                    : error.message);
+            }
 
             // Check login attempts
             const remainingAttempts = Security.trackLoginAttempt(email, true);
 
-            // Trigger 2FA
-            this.trigger2FA(email, rememberMe);
+            // Get user profile from database
+            const userProfile = await Database.getUserByEmail(email);
+
+            // Store session
+            const userData = {
+                id: data.user.id,
+                email: data.user.email,
+                name: userProfile?.name || data.user.email.split('@')[0],
+                photoUrl: userProfile?.photo_url || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(data.user.email),
+                title: userProfile?.title || '',
+                verified: userProfile?.verified || false
+            };
+
+            Security.storeSession(userData, rememberMe);
+
+            this.hideLoading();
+            Utils.showToast('Connexion réussie!', 'success');
+
+            // Redirect to app
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
 
         } catch (error) {
             this.hideLoading();
@@ -186,11 +215,60 @@ class AuthManager {
                 throw new Error('Mot de passe trop faible. ' + strength.feedback.join(', '));
             }
 
-            // Simul ate registration (in production, this would be an API call)
-            await this.simulateSignupAPI(firstname, lastname, email, password, profession);
+            // Real Supabase signup
+            const { data, error } = await window.supabaseClient.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        first_name: firstname,
+                        last_name: lastname,
+                        full_name: `${firstname} ${lastname}`,
+                        profession: profession
+                    }
+                }
+            });
 
-            // Trigger 2FA setup
-            this.trigger2FA(email, false, true);
+            if (error) {
+                throw new Error(error.message);
+            }
+
+            // Create user profile in database
+            try {
+                await Database.createUser({
+                    email,
+                    name: `${firstname} ${lastname}`,
+                    title: profession,
+                    photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(firstname + ' ' + lastname)}&background=D4A373&color=fff`
+                });
+            } catch (dbError) {
+                console.warn('Profile creation warning:', dbError);
+            }
+
+            this.hideLoading();
+
+            // Check if email confirmation is required
+            if (data.user && !data.session) {
+                Utils.showToast('Compte créé! Vérifiez votre email pour confirmer.', 'success');
+            } else {
+                Utils.showToast('Compte créé avec succès!', 'success');
+
+                // Store session
+                const userData = {
+                    id: data.user.id,
+                    email: data.user.email,
+                    name: `${firstname} ${lastname}`,
+                    photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(firstname + ' ' + lastname)}&background=D4A373&color=fff`,
+                    title: profession,
+                    verified: false
+                };
+                Security.storeSession(userData, false);
+
+                // Redirect to app
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1500);
+            }
 
         } catch (error) {
             this.hideLoading();
