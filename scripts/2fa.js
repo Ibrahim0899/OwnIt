@@ -33,79 +33,37 @@ const TwoFactorAuth = {
     },
 
     /**
-     * Send email verification code via Resend API directly
-     * This sends a real branded email with the verification code
+     * Send email verification code via Supabase Edge Function
+     * This calls our deployed function which sends emails via Resend
      */
     async sendEmailCode(email, code) {
-        console.log(`📧 Sending 2FA code to ${email} via Resend`);
+        console.log(`📧 Sending 2FA code to ${email} via Supabase Edge Function`);
 
         try {
-            // Call Resend API directly
-            const response = await fetch('https://api.resend.com/emails', {
+            // Call Supabase Edge Function
+            const response = await fetch('https://wetunpfxuxdcaicyxhkq.supabase.co/functions/v1/send-2fa-email', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer re_Ptjarz7e_FnCwBXSeJU8uTBTShjcD6EGw',
+                    'Authorization': `Bearer ${window.supabaseClient.supabaseKey}`,
                 },
-                body: JSON.stringify({
-                    from: 'OwnIt <noreply@ownittheibrahim.tech>',
-                    to: [email],
-                    subject: '🔐 OwnIt - Votre code de vérification',
-                    html: `
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <meta charset="UTF-8">
-                            <style>
-                                body { font-family: 'Inter', Arial, sans-serif; background-color: #1a1a1a; color: #ffffff; margin: 0; padding: 20px; }
-                                .container { max-width: 500px; margin: 0 auto; background: linear-gradient(135deg, #2d2d2d 0%, #1a1a1a 100%); border-radius: 16px; padding: 40px; }
-                                .logo { font-size: 32px; font-weight: bold; color: #D4A373; text-align: center; margin-bottom: 30px; }
-                                .code-box { background: linear-gradient(135deg, #D4A373 0%, #C89058 100%); border-radius: 12px; padding: 24px; text-align: center; margin: 30px 0; }
-                                .code { font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #ffffff; font-family: monospace; }
-                                .message { color: #a0a0a0; line-height: 1.6; text-align: center; }
-                                .footer { margin-top: 30px; text-align: center; color: #666; font-size: 12px; }
-                                .highlight { color: #D4A373; }
-                            </style>
-                        </head>
-                        <body>
-                            <div class="container">
-                                <div class="logo">🌍 OwnIt</div>
-                                
-                                <p class="message">Bonjour,</p>
-                                <p class="message">Voici votre code de vérification pour vous connecter à <span class="highlight">OwnIt</span>:</p>
-                                
-                                <div class="code-box">
-                                    <div class="code">${code}</div>
-                                </div>
-                                
-                                <p class="message">Ce code expire dans <strong>5 minutes</strong>.</p>
-                                <p class="message">Si vous n'avez pas demandé ce code, ignorez cet email.</p>
-                                
-                                <div class="footer">
-                                    <p>L'équipe OwnIt</p>
-                                    <p>Chaque voix porte une histoire 🎤</p>
-                                </div>
-                            </div>
-                        </body>
-                        </html>
-                    `,
-                }),
+                body: JSON.stringify({ email, code }),
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                console.error('Resend API error:', data);
-                throw new Error('Failed to send email');
+                console.error('Edge Function error:', data);
+                throw new Error(data.error || 'Failed to send email');
             }
 
-            console.log('✅ Email sent successfully:', data.id);
+            console.log('✅ Email sent successfully via Edge Function:', data.messageId);
             Utils.showToast(`📧 Code de vérification envoyé à ${email}!`, 'success');
 
             // Store that we're using local code verification
             sessionStorage.setItem('2fa_use_supabase', 'false');
 
-            return { success: true, emailId: data.id };
+            return { success: true, emailId: data.messageId };
         } catch (err) {
             console.error('Email sending failed:', err);
             // Fallback to demo mode
