@@ -267,6 +267,7 @@ class AuthManager {
             // Create user profile in database
             try {
                 await Database.createUser({
+                    id: data.user.id,  // Pass the Supabase auth user ID
                     email,
                     name: `${firstname} ${lastname}`,
                     title: profession,

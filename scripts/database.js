@@ -5,9 +5,21 @@
 const Database = {
     // ========== USERS ==========
     async createUser(userData) {
+        // Get current authenticated user ID if not provided
+        let userId = userData.id;
+        if (!userId) {
+            const { data: { user } } = await supabaseClient.auth.getUser();
+            userId = user?.id;
+        }
+
+        if (!userId) {
+            throw new Error('User must be authenticated to create profile');
+        }
+
         const { data, error } = await supabaseClient
             .from('users')
             .insert([{
+                id: userId,  // Use Supabase auth user ID for RLS
                 email: userData.email,
                 name: userData.name,
                 title: userData.title || '',
