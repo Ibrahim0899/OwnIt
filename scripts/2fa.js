@@ -39,13 +39,16 @@ const TwoFactorAuth = {
     async sendEmailCode(email, code) {
         console.log(`📧 Sending 2FA code to ${email} via Supabase Edge Function`);
 
+        // Supabase anon key for Edge Function authorization
+        const ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndldHVucGZ4dXhkY2FpY3l4aGtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MjkyMjUsImV4cCI6MjA4MDUwNTIyNX0.XhiTFD5oA-YWofQhEOTaVleqzvYaRUdc_NAtAocyk_4';
+
         try {
             // Call Supabase Edge Function
             const response = await fetch('https://wetunpfxuxdcaicyxhkq.supabase.co/functions/v1/send-2fa-email', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${window.supabaseClient.supabaseKey}`,
+                    'Authorization': `Bearer ${ANON_KEY}`,
                 },
                 body: JSON.stringify({ email, code }),
             });
@@ -60,16 +63,15 @@ const TwoFactorAuth = {
             console.log('✅ Email sent successfully via Edge Function:', data.messageId);
             Utils.showToast(`📧 Code de vérification envoyé à ${email}!`, 'success');
 
-            // Store that we're using local code verification
+            // Store that we're using local code verification (not Supabase OTP)
             sessionStorage.setItem('2fa_use_supabase', 'false');
 
             return { success: true, emailId: data.messageId };
         } catch (err) {
-            console.error('Email sending failed:', err);
-            // Fallback to demo mode
-            this.showCodeVisually(code, 'Email (Mode Démo)');
-            Utils.showToast(`📧 Code affiché (mode démo)`, 'warning');
-            return { success: false };
+            console.error('❌ Email sending failed:', err);
+            // NO MORE DEMO MODE - show error instead
+            Utils.showToast(`❌ Erreur d'envoi email: ${err.message}`, 'error');
+            throw err;  // Re-throw to prevent login continuation
         }
     },
 
