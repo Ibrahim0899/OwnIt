@@ -3,24 +3,12 @@
 // ====================================
 
 const Security = {
-    // Dynamic encryption key (session-specific, not hardcoded)
-    // The key is derived from a combination of factors for better security
-    _keyBase: 'OwnIt-2024',
+    // Secret key for encryption (in production, this would be server-generated)
+    secretKey: 'OwnIt-Secure-2024-AES-Key',
 
-    get secretKey() {
-        // Generate a session-specific key using browser fingerprint + timestamp
-        const sessionId = sessionStorage.getItem('_sk') || this._generateSessionKey();
-        return this._keyBase + '-' + sessionId;
-    },
-
-    _generateSessionKey() {
-        const key = Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-        sessionStorage.setItem('_sk', key);
-        return key;
-    },
-
-    // DEV MODE - MUST BE FALSE IN PRODUCTION
-    devMode: false,
+    // DEV MODE - Set to true to bypass authentication for testing
+    // WARNING: Set to false in production!
+    devMode: true,
 
     // Session configuration
     sessionTimeout: 24 * 60 * 60 * 1000, // 24 hours
@@ -317,36 +305,9 @@ const Security = {
      * Sanitize user input (XSS prevention)
      */
     sanitizeInput(input) {
-        if (typeof input !== 'string') return input;
         const div = document.createElement('div');
         div.textContent = input;
         return div.innerHTML;
-    },
-
-    /**
-     * Escape HTML entities for safe rendering
-     */
-    escapeHtml(str) {
-        if (typeof str !== 'string') return str;
-        const htmlEntities = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#x27;',
-            '/': '&#x2F;'
-        };
-        return str.replace(/[&<>"'/]/g, char => htmlEntities[char]);
-    },
-
-    /**
-     * Safe innerHTML setter - sanitizes content before insertion
-     */
-    safeSetHtml(element, html) {
-        // For trusted templates only - user data should use escapeHtml first
-        if (element) {
-            element.innerHTML = html;
-        }
     },
 
     /**
@@ -360,16 +321,6 @@ const Security = {
             inputs.forEach(input => {
                 input.value = this.sanitizeInput(input.value);
             });
-        });
-
-        // Also sanitize on paste events
-        document.addEventListener('paste', (e) => {
-            const target = e.target;
-            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-                setTimeout(() => {
-                    target.value = this.sanitizeInput(target.value);
-                }, 0);
-            }
         });
     },
 

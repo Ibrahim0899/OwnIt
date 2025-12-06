@@ -25,6 +25,32 @@ class AuthManager {
         this.setupAlternativeAuth();
     }
 
+    async logout() {
+        this.showLoading();
+        try {
+            // Supabase auth signout
+            const { error } = await window.supabaseClient.auth.signOut();
+            if (error) throw error;
+
+            // Clear local session via Security module
+            Security.clearSession();
+
+            Utils.showToast('Déconnexion réussie', 'success');
+
+            // Redirect to auth page setup
+            setTimeout(() => {
+                window.location.href = 'auth.html';
+            }, 500);
+        } catch (error) {
+            console.error('Logout error:', error);
+            // Force logout anyway
+            Security.clearSession();
+            window.location.href = 'auth.html';
+        } finally {
+            this.hideLoading();
+        }
+    }
+
     setupFormSwitching() {
         const switchToSignup = document.getElementById('switch-to-signup');
         const switchToLogin = document.getElementById('switch-to-login');
@@ -152,7 +178,7 @@ class AuthManager {
             // Get user profile from database
             const userProfile = await Database.getUserByEmail(email);
 
-            // Store session
+            // Store user data temporarily for after 2FA
             const userData = {
                 id: data.user.id,
                 email: data.user.email,
@@ -162,15 +188,20 @@ class AuthManager {
                 verified: userProfile?.verified || false
             };
 
-            Security.storeSession(userData, rememberMe);
-
             this.hideLoading();
-            Utils.showToast('Connexion réussie!', 'success');
 
-            // Redirect to app
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 1000);
+            // 🔐 TRIGGER 2FA EMAIL VERIFICATION
+            Utils.showToast('Vérification 2FA requise...', 'info');
+
+            TwoFactorAuth.show2FAModal('email', email, () => {
+                // 2FA SUCCESS - Now store session and redirect
+                Security.storeSession(userData, rememberMe);
+                Utils.showToast('Connexion réussie avec 2FA!', 'success');
+
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1000);
+            });
 
         } catch (error) {
             this.hideLoading();

@@ -5,6 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="OwnIt - Réseau social professionnel voice-first avec une touche africaine">
+    <!-- Content Security Policy -->
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://*.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co;">
     <title>OwnIt - Votre Histoire Professionnelle</title>
 
     <!-- Google Fonts -->
@@ -55,6 +58,13 @@
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                         <path
                             d="M12 22C13.1 22 14 21.1 14 20H10C10 21.1 10.9 22 12 22ZM18 16V11C18 7.93 16.37 5.36 13.5 4.68V4C13.5 3.17 12.83 2.5 12 2.5C11.17 2.5 10.5 3.17 10.5 4V4.68C7.64 5.36 6 7.92 6 11V16L4 18V19H20V18L18 16Z"
+                            fill="currentColor" />
+                    </svg>
+                </button>
+                <button class="icon-btn" aria-label="Se déconnecter" onclick="Security.logout()">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                        <path
+                            d="M17 7L15.59 8.41L18.17 11H8V13H18.17L15.59 15.58L17 17L22 12L17 7ZM4 5H12V3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H12V19H4V5Z"
                             fill="currentColor" />
                     </svg>
                 </button>
@@ -185,8 +195,10 @@
     <!-- Scripts -->
     <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="scripts/supabase-config.js"></script>
     <script src="scripts/database.js"></script>
+    <script src="scripts/security.js?v=2"></script>
 
     <script src="scripts/utils.js"></script>
     <script src="scripts/ui-polish.js"></script>
