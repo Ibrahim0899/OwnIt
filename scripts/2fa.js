@@ -33,23 +33,43 @@ const TwoFactorAuth = {
     },
 
     /**
-     * Send email verification code via Supabase
-     * Note: Since user already logged in with password, we use local code verification
-     * The code is displayed visually for demo purposes
+     * Send email verification code via Supabase OTP
+     * This sends a real email with a verification code
      */
     async sendEmailCode(email, code) {
-        console.log(`📧 Sending verification code to ${email}`);
+        console.log(`📧 Sending real OTP email to ${email}`);
 
-        // For a production app with real email sending, you would:
-        // 1. Call a Supabase Edge Function to send the email
-        // 2. Or use a third-party email service like SendGrid/Mailgun
+        try {
+            // Use Supabase to send real OTP email
+            const { data, error } = await supabaseClient.auth.signInWithOtp({
+                email: email,
+                options: {
+                    shouldCreateUser: false,  // Don't create new user, just send OTP
+                }
+            });
 
-        // For now, we show the code visually (demo mode)
-        // This still provides 2FA security as the code is random and expires
-        this.showCodeVisually(code, 'Email');
-        Utils.showToast(`📧 Code de vérification généré pour ${email}`, 'success');
+            if (error) {
+                console.error('Supabase OTP error:', error);
+                // If Supabase OTP fails, fallback to demo mode
+                this.showCodeVisually(code, 'Email (Mode Démo)');
+                Utils.showToast(`📧 Code affiché (mode démo) pour ${email}`, 'warning');
+                return { useSupabaseOtp: false };
+            }
 
-        return true;
+            Utils.showToast(`📧 Code de vérification envoyé à ${email}. Vérifiez votre boîte mail!`, 'success');
+
+            // Store that we're using Supabase OTP for verification
+            sessionStorage.setItem('2fa_use_supabase', 'true');
+            sessionStorage.setItem('2fa_email', email);
+
+            return { useSupabaseOtp: true };
+        } catch (err) {
+            console.error('Email sending failed:', err);
+            // Fallback to demo mode
+            this.showCodeVisually(code, 'Email (Mode Démo)');
+            Utils.showToast(`📧 Code affiché (mode démo) pour ${email}`, 'warning');
+            return { useSupabaseOtp: false };
+        }
     },
 
 
@@ -76,9 +96,39 @@ const TwoFactorAuth = {
     },
 
     /**
-     * Verify code
+     * Verify code - supports both Supabase OTP and local verification
      */
-    verifyCode(enteredCode) {
+    async verifyCode(enteredCode) {
+        // Check if using Supabase OTP
+        const useSupabaseOtp = sessionStorage.getItem('2fa_use_supabase') === 'true';
+        const email = sessionStorage.getItem('2fa_email');
+
+        if (useSupabaseOtp && email) {
+            // Verify using Supabase OTP
+            try {
+                const { data, error } = await supabaseClient.auth.verifyOtp({
+                    email: email,
+                    token: enteredCode,
+                    type: 'email'
+                });
+
+                if (error) {
+                    throw new Error('Code incorrect ou expiré. Vérifiez votre email.');
+                }
+
+                // Clear Supabase OTP session data
+                sessionStorage.removeItem('2fa_use_supabase');
+                sessionStorage.removeItem('2fa_email');
+                Security.logSecurityEvent('2fa_success', '2FA verification successful via Supabase');
+
+                return true;
+            } catch (err) {
+                console.error('Supabase OTP verification error:', err);
+                throw new Error(err.message || 'Code incorrect. Veuillez réessayer.');
+            }
+        }
+
+        // Fallback to local verification (demo mode)
         const encrypted = sessionStorage.getItem('2fa_verification');
 
         if (!encrypted) {
@@ -334,11 +384,11 @@ const TwoFactorAuth = {
     /**
      * Handle code verification
      */
-    handleVerify(inputs, onSuccess) {
+    async handleVerify(inputs, onSuccess) {
         const code = Array.from(inputs).map(inp => inp.value).join('');
 
         try {
-            this.verifyCode(code);
+            await this.verifyCode(code);
 
             // Success
             Utils.showToast('Vérification réussie!', 'success');
