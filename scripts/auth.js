@@ -246,28 +246,32 @@ class AuthManager {
                 throw new Error('Mot de passe trop faible. ' + strength.feedback.join(', '));
             }
 
-            // Real Supabase signup
-            const { data, error } = await window.supabaseClient.auth.signUp({
-                email,
-                password,
-                options: {
-                    data: {
-                        first_name: firstname,
-                        last_name: lastname,
-                        full_name: `${firstname} ${lastname}`,
-                        profession: profession
-                    }
-                }
+            // Use Edge Function for signup with auto-confirm
+            const response = await fetch('https://wetunpfxuxdcaicyxhkq.supabase.co/functions/v1/signup-user', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndldHVucGZ4dXhkY2FpY3l4aGtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MjkyMjUsImV4cCI6MjA4MDUwNTIyNX0.XhiTFD5oA-YWofQhEOTaVleqzvYaRUdc_NAtAocyk_4',
+                },
+                body: JSON.stringify({
+                    email,
+                    password,
+                    firstName: firstname,
+                    lastName: lastname,
+                    profession
+                }),
             });
 
-            if (error) {
-                throw new Error(error.message);
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Erreur lors de l\'inscription');
             }
 
             // Create user profile in database
             try {
                 await Database.createUser({
-                    id: data.user.id,  // Pass the Supabase auth user ID
+                    id: result.user.id,
                     email,
                     name: `${firstname} ${lastname}`,
                     title: profession,
@@ -277,22 +281,27 @@ class AuthManager {
                 console.warn('Profile creation warning:', dbError);
             }
 
+            // Auto-login after signup
+            const { data: loginData, error: loginError } = await window.supabaseClient.auth.signInWithPassword({
+                email,
+                password
+            });
+
             this.hideLoading();
 
-            // Check if email confirmation is required
-            if (data.user && !data.session) {
-                Utils.showToast('Compte créé! Vérifiez votre email pour confirmer.', 'success');
+            if (loginError) {
+                Utils.showToast('Compte créé! Connectez-vous pour continuer.', 'success');
             } else {
                 Utils.showToast('Compte créé avec succès!', 'success');
 
                 // Store session
                 const userData = {
-                    id: data.user.id,
-                    email: data.user.email,
+                    id: result.user.id,
+                    email: email,
                     name: `${firstname} ${lastname}`,
                     photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(firstname + ' ' + lastname)}&background=D4A373&color=fff`,
                     title: profession,
-                    verified: false
+                    verified: true  // Auto-confirmed
                 };
                 Security.storeSession(userData, false);
 
