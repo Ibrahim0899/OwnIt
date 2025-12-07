@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vérification Email - OwnIt</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            background: rgba(45, 45, 45, 0.9);
+            border-radius: 20px;
+            padding: 50px;
+            max-width: 450px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .logo {
+            font-size: 48px;
+            margin-bottom: 20px;
+        }
+
+        .brand {
+            font-size: 28px;
+            font-weight: bold;
+            color: #D4A373;
+            margin-bottom: 30px;
+        }
+
+        .status-icon {
+            font-size: 64px;
+            margin: 20px 0;
+        }
+
+        .message {
+            font-size: 18px;
+            color: #a0a0a0;
+            line-height: 1.6;
+            margin-bottom: 30px;
+        }
+
+        .highlight {
+            color: #D4A373;
+            font-weight: bold;
+        }
+
+        .btn {
+            display: inline-block;
+            background: linear-gradient(135deg, #D4A373 0%, #C89058 100%);
+            color: white;
+            text-decoration: none;
+            padding: 16px 40px;
+            border-radius: 10px;
+            font-weight: bold;
+            font-size: 16px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(212, 163, 115, 0.3);
+        }
+
+        .loading {
+            display: none;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(212, 163, 115, 0.3);
+            border-top-color: #D4A373;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .error {
+            color: #ff6b6b;
+        }
+
+        .success {
+            color: #4ecdc4;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="logo">🌍</div>
+        <div class="brand">OwnIt</div>
+
+        <div id="loading" class="loading active">
+            <div class="spinner"></div>
+            <p class="message">Vérification en cours...</p>
+        </div>
+
+        <div id="success" class="loading">
+            <div class="status-icon">✅</div>
+            <p class="message success">Votre email a été vérifié avec succès!</p>
+            <p class="message">Votre compte est maintenant <span class="highlight">entièrement activé</span>.</p>
+            <a href="index.html" class="btn">Accéder à OwnIt</a>
+        </div>
+
+        <div id="error" class="loading">
+            <div class="status-icon">❌</div>
+            <p class="message error">La vérification a échoué</p>
+            <p class="message" id="error-message">Le lien est invalide ou a expiré.</p>
+            <a href="auth.html" class="btn">Retour à la connexion</a>
+        </div>
+
+        <div id="already-verified" class="loading">
+            <div class="status-icon">ℹ️</div>
+            <p class="message">Votre email a déjà été vérifié.</p>
+            <a href="index.html" class="btn">Accéder à OwnIt</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        const SUPABASE_URL = 'https://wetunpfxuxdcaicyxhkq.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndldHVucGZ4dXhkY2FpY3l4aGtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MjkyMjUsImV4cCI6MjA4MDUwNTIyNX0.XhiTFD5oA-YWofQhEOTaVleqzvYaRUdc_NAtAocyk_4';
+
+        async function verifyEmail() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+
+            if (!token) {
+                showError('Aucun token de vérification trouvé.');
+                return;
+            }
+
+            try {
+                // Call Edge Function to verify
+                const response = await fetch(`${SUPABASE_URL}/functions/v1/verify-email`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                    },
+                    body: JSON.stringify({ token }),
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.success) {
+                    showSuccess();
+                } else if (result.alreadyVerified) {
+                    showAlreadyVerified();
+                } else {
+                    showError(result.error || 'Vérification échouée');
+                }
+            } catch (err) {
+                console.error('Verification error:', err);
+                showError('Erreur de connexion. Veuillez réessayer.');
+            }
+        }
+
+        function showSuccess() {
+            document.getElementById('loading').classList.remove('active');
+            document.getElementById('success').classList.add('active');
+        }
+
+        function showError(message) {
+            document.getElementById('loading').classList.remove('active');
+            document.getElementById('error').classList.add('active');
+            document.getElementById('error-message').textContent = message;
+        }
+
+        function showAlreadyVerified() {
+            document.getElementById('loading').classList.remove('active');
+            document.getElementById('already-verified').classList.add('active');
+        }
+
+        // Start verification on page load
+        verifyEmail();
+    </script>
+</body>
+
+</html>
