@@ -9,6 +9,9 @@ class AuthManager {
     }
 
     init() {
+        // Initialize form required attributes
+        this.initFormValidation();
+
         // Setup form switching
         this.setupFormSwitching();
 
@@ -23,6 +26,19 @@ class AuthManager {
 
         // Setup alternative auth methods
         this.setupAlternativeAuth();
+    }
+
+    initFormValidation() {
+        // Mark all required fields with data-required attribute for later restoration
+        document.querySelectorAll('#login-form-element [required], #signup-form-element [required]').forEach(el => {
+            el.setAttribute('data-required', 'true');
+        });
+
+        // At start, login form is visible, so disable signup form's required fields
+        const signupFormElement = document.getElementById('signup-form-element');
+        if (signupFormElement) {
+            signupFormElement.querySelectorAll('[required]').forEach(el => el.removeAttribute('required'));
+        }
     }
 
     async logout() {
@@ -69,15 +85,25 @@ class AuthManager {
     switchForm(formType) {
         const loginForm = document.getElementById('login-form');
         const signupForm = document.getElementById('signup-form');
+        const loginFormElement = document.getElementById('login-form-element');
+        const signupFormElement = document.getElementById('signup-form-element');
 
         if (formType === 'signup') {
             loginForm.classList.remove('active');
             signupForm.classList.add('active');
             this.currentForm = 'signup';
+
+            // Disable required on hidden login fields to prevent validation blocking
+            loginFormElement.querySelectorAll('[required]').forEach(el => el.removeAttribute('required'));
+            signupFormElement.querySelectorAll('[data-required]').forEach(el => el.setAttribute('required', ''));
         } else {
             signupForm.classList.remove('active');
             loginForm.classList.add('active');
             this.currentForm = 'login';
+
+            // Disable required on hidden signup fields to prevent validation blocking
+            signupFormElement.querySelectorAll('[required]').forEach(el => el.removeAttribute('required'));
+            loginFormElement.querySelectorAll('[data-required]').forEach(el => el.setAttribute('required', ''));
         }
     }
 
@@ -178,7 +204,7 @@ class AuthManager {
             // Get user profile from database
             const userProfile = await Database.getUserByEmail(email);
 
-            // Store user data temporarily for after 2FA
+            // Store session
             const userData = {
                 id: data.user.id,
                 email: data.user.email,
@@ -188,20 +214,15 @@ class AuthManager {
                 verified: userProfile?.verified || false
             };
 
+            Security.storeSession(userData, rememberMe);
+
             this.hideLoading();
+            Utils.showToast('Connexion réussie!', 'success');
 
-            // 🔐 TRIGGER 2FA EMAIL VERIFICATION
-            Utils.showToast('Vérification 2FA requise...', 'info');
-
-            TwoFactorAuth.show2FAModal('email', email, () => {
-                // 2FA SUCCESS - Now store session and redirect
-                Security.storeSession(userData, rememberMe);
-                Utils.showToast('Connexion réussie avec 2FA!', 'success');
-
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 1000);
-            });
+            // Redirect to app
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1000);
 
         } catch (error) {
             this.hideLoading();
@@ -246,32 +267,27 @@ class AuthManager {
                 throw new Error('Mot de passe trop faible. ' + strength.feedback.join(', '));
             }
 
-            // Use Edge Function for signup with auto-confirm
-            const response = await fetch('https://wetunpfxuxdcaicyxhkq.supabase.co/functions/v1/signup-user', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndldHVucGZ4dXhkY2FpY3l4aGtxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQ5MjkyMjUsImV4cCI6MjA4MDUwNTIyNX0.XhiTFD5oA-YWofQhEOTaVleqzvYaRUdc_NAtAocyk_4',
-                },
-                body: JSON.stringify({
-                    email,
-                    password,
-                    firstName: firstname,
-                    lastName: lastname,
-                    profession
-                }),
+            // Real Supabase signup
+            const { data, error } = await window.supabaseClient.auth.signUp({
+                email,
+                password,
+                options: {
+                    data: {
+                        first_name: firstname,
+                        last_name: lastname,
+                        full_name: `${firstname} ${lastname}`,
+                        profession: profession
+                    }
+                }
             });
 
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Erreur lors de l\'inscription');
+            if (error) {
+                throw new Error(error.message);
             }
 
             // Create user profile in database
             try {
                 await Database.createUser({
-                    id: result.user.id,
                     email,
                     name: `${firstname} ${lastname}`,
                     title: profession,
@@ -281,27 +297,22 @@ class AuthManager {
                 console.warn('Profile creation warning:', dbError);
             }
 
-            // Auto-login after signup
-            const { data: loginData, error: loginError } = await window.supabaseClient.auth.signInWithPassword({
-                email,
-                password
-            });
-
             this.hideLoading();
 
-            if (loginError) {
-                Utils.showToast('Compte créé! Connectez-vous pour continuer.', 'success');
+            // Check if email confirmation is required
+            if (data.user && !data.session) {
+                Utils.showToast('Compte créé! Vérifiez votre email pour confirmer.', 'success');
             } else {
                 Utils.showToast('Compte créé avec succès!', 'success');
 
                 // Store session
                 const userData = {
-                    id: result.user.id,
-                    email: email,
+                    id: data.user.id,
+                    email: data.user.email,
                     name: `${firstname} ${lastname}`,
                     photoUrl: `https://ui-avatars.com/api/?name=${encodeURIComponent(firstname + ' ' + lastname)}&background=D4A373&color=fff`,
                     title: profession,
-                    verified: true  // Auto-confirmed
+                    verified: false
                 };
                 Security.storeSession(userData, false);
 

@@ -5,9 +5,54 @@
 const Profile = {
     audioPlayer: null,
     experiencePlayers: [],
+    currentUser: null,
 
-    render(container) {
-        const user = MockData.currentUser;
+    async render(container) {
+        // Show loading state
+        container.innerHTML = `
+            <div class="profile-container">
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Chargement du profil...</p>
+                </div>
+            </div>
+        `;
+
+        try {
+            // Get current user from session or database
+            const session = Security.getSession();
+            if (session && session.user) {
+                // Try to get full profile from database
+                this.currentUser = await Database.getUserByEmail(session.user.email) || session.user;
+            } else {
+                // Fallback to MockData for demo/dev
+                this.currentUser = MockData?.currentUser || {
+                    name: 'Utilisateur',
+                    email: 'user@ownit.app',
+                    title: 'Professionnel',
+                    location: 'Non défini',
+                    bio: '',
+                    photoUrl: 'https://ui-avatars.com/api/?name=User&background=D4A373&color=fff',
+                    skills: [],
+                    experience: [],
+                    verified: false
+                };
+            }
+        } catch (error) {
+            console.error('Error loading profile:', error);
+            Utils.showToast('Erreur de chargement du profil', 'error');
+            this.currentUser = MockData?.currentUser || { name: 'Erreur', title: '', skills: [], experience: [] };
+        }
+
+        // Normalize data format (support both Supabase snake_case and camelCase)
+        const user = {
+            ...this.currentUser,
+            photoUrl: this.currentUser.photo_url || this.currentUser.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(this.currentUser.name || 'User')}&background=D4A373&color=fff`,
+            coverUrl: this.currentUser.cover_url || this.currentUser.coverUrl,
+            griotAudio: this.currentUser.griot_audio_url || this.currentUser.griotAudio,
+            skills: this.currentUser.skills || [],
+            experience: this.currentUser.experience || []
+        };
 
         const profileHTML = `
             <div class="profile-container">

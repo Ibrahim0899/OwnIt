@@ -8,10 +8,48 @@ const Network = {
     requests: [],
     suggestions: [],
 
-    render(container) {
-        this.connections = MockData.connections;
-        this.requests = MockData.connectionRequests;
-        this.suggestions = MockData.suggestions;
+    async render(container) {
+        // Show loading state
+        container.innerHTML = `
+            <div class="network-container">
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Chargement du réseau...</p>
+                </div>
+            </div>
+        `;
+
+        try {
+            // Get current user from session
+            const session = Security.getSession();
+            const userId = session?.user?.id;
+
+            if (userId) {
+                // Load from Supabase
+                const [dbConnections, dbRequests] = await Promise.all([
+                    Database.getConnections(userId),
+                    Database.getConnectionRequests(userId)
+                ]);
+
+                this.connections = dbConnections || [];
+                this.requests = dbRequests || [];
+            }
+
+            // Fallback to MockData if empty
+            if (this.connections.length === 0) {
+                this.connections = MockData?.connections || [];
+            }
+            if (this.requests.length === 0) {
+                this.requests = MockData?.connectionRequests || [];
+            }
+
+            this.suggestions = MockData?.suggestions || [];
+        } catch (error) {
+            console.error('Error loading network:', error);
+            this.connections = MockData?.connections || [];
+            this.requests = MockData?.connectionRequests || [];
+            this.suggestions = MockData?.suggestions || [];
+        }
 
         const networkHTML = `
             <div class="network-container">

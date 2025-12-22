@@ -5,10 +5,39 @@
 const Messages = {
     conversations: [],
     activeConversation: null,
-    currentUserId: '1',
+    currentUserId: null,
 
-    render(container) {
-        this.conversations = MockData.conversations;
+    async render(container) {
+        // Show loading state
+        container.innerHTML = `
+            <div class="messages-container">
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Chargement des messages...</p>
+                </div>
+            </div>
+        `;
+
+        try {
+            // Get current user ID from session
+            const session = Security.getSession();
+            this.currentUserId = session?.user?.id || '1';
+
+            // Try to load conversations from Supabase
+            const dbConversations = await Database.getConversations(this.currentUserId);
+
+            if (dbConversations && dbConversations.length > 0) {
+                // Normalize conversation format from Supabase
+                this.conversations = dbConversations.map(conv => this.normalizeConversation(conv));
+            } else {
+                // Fallback to MockData for demo
+                this.conversations = MockData?.conversations || [];
+            }
+        } catch (error) {
+            console.error('Error loading conversations:', error);
+            // Fallback to MockData
+            this.conversations = MockData?.conversations || [];
+        }
 
         const messagesHTML = `
             <div class="messages-container">
@@ -20,7 +49,7 @@ const Messages = {
                         </div>
                     </div>
                     <div class="conversations-list" id="conversations-list">
-                        ${this.renderConversationsList()}
+                        ${this.conversations.length > 0 ? this.renderConversationsList() : '<p class="no-conversations">Aucune conversation</p>'}
                     </div>
                 </div>
                 
@@ -32,6 +61,28 @@ const Messages = {
 
         container.innerHTML = messagesHTML;
         this.setupEvents();
+    },
+
+    // Normalize conversation data from Supabase to expected format
+    normalizeConversation(conv) {
+        // Support both Supabase format and MockData format
+        const otherUser = conv.participant || conv.user || {};
+        return {
+            id: conv.id,
+            user: {
+                id: otherUser.id,
+                name: otherUser.name || 'Utilisateur',
+                photoUrl: otherUser.photo_url || otherUser.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(otherUser.name || 'User')}`,
+                online: otherUser.is_online || otherUser.online || false
+            },
+            messages: conv.messages || [],
+            lastMessage: conv.last_message || conv.lastMessage || {
+                text: 'Aucun message',
+                timestamp: new Date(),
+                isVoice: false,
+                unread: 0
+            }
+        };
     },
 
     renderConversationsList() {

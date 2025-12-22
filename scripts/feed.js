@@ -5,9 +5,30 @@
 const Feed = {
     posts: [],
     currentFilter: 'all',
+    isLoading: false,
 
-    render(container) {
-        this.posts = MockData.posts;
+    async render(container) {
+        // Show loading state
+        container.innerHTML = `
+            <div class="feed-container">
+                <div class="feed-header">
+                    <h2 class="page-title">Fil d'actualité</h2>
+                </div>
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Chargement des posts...</p>
+                </div>
+            </div>
+        `;
+
+        try {
+            // Fetch real data from Supabase
+            this.posts = await Database.getPosts(20, 0);
+        } catch (error) {
+            console.error('Error loading posts:', error);
+            this.posts = [];
+            Utils.showToast('Erreur de chargement des posts', 'error');
+        }
 
         const feedHTML = `
             <div class="feed-container">
@@ -66,14 +87,24 @@ const Feed = {
     },
 
     renderPost(post) {
+        // Support both Supabase format (users) and MockData format (author)
+        const author = post.users || post.author || {};
+        const authorName = author.name || 'Utilisateur';
+        const authorPhoto = author.photo_url || author.photoUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}`;
+        const authorTitle = author.title || '';
+        const createdAt = post.created_at ? new Date(post.created_at) : (post.createdAt || new Date());
+        const likes = post.likes || 0;
+        const comments = post.comments_count || post.comments || 0;
+        const shares = post.shares || 0;
+
         return `
             <div class="post-card" data-post-id="${post.id}">
                 <div class="post-header">
-                    <img src="${post.author.photoUrl}" alt="${post.author.name}" class="post-author-photo">
+                    <img src="${authorPhoto}" alt="${authorName}" class="post-author-photo" onerror="this.src='https://ui-avatars.com/api/?name=User'">
                     <div class="post-author-info">
-                        <div class="post-author-name">${post.author.name}</div>
-                        <div class="post-author-title">${post.author.title}</div>
-                        <div class="post-timestamp">${Utils.formatRelativeTime(post.createdAt)}</div>
+                        <div class="post-author-name">${authorName}</div>
+                        <div class="post-author-title">${authorTitle}</div>
+                        <div class="post-timestamp">${Utils.formatRelativeTime(createdAt)}</div>
                     </div>
                 </div>
                 
@@ -86,19 +117,19 @@ const Feed = {
                         <svg viewBox="0 0 24 24" fill="none">
                             <path d="M12 21.35L10.55 20.03C5.4 15.36 2 12.28 2 8.5C2 5.42 4.42 3 7.5 3C9.24 3 10.91 3.81 12 5.09C13.09 3.81 14.76 3 16.5 3C19.58 3 22 5.42 22 8.5C22 12.28 18.6 15.36 13.45 20.04L12 21.35Z" fill="currentColor"/>
                         </svg>
-                        <span class="like-count">${post.likes}</span>
+                        <span class="like-count">${likes}</span>
                     </button>
                     <button class="post-action-btn" data-action="comment">
                         <svg viewBox="0 0 24 24" fill="none">
                             <path d="M21 6H19V15H6V17C6 17.55 6.45 18 7 18H18L22 22V7C22 6.45 21.55 6 21 6ZM17 12V3C17 2.45 16.55 2 16 2H3C2.45 2 2 2.45 2 3V17L6 13H16C16.55 13 17 12.55 17 12Z" fill="currentColor"/>
                         </svg>
-                        <span>${post.comments}</span>
+                        <span>${comments}</span>
                     </button>
                     <button class="post-action-btn" data-action="share">
                         <svg viewBox="0 0 24 24" fill="none">
                             <path d="M18 16.08C17.24 16.08 16.56 16.38 16.04 16.85L8.91 12.7C8.96 12.47 9 12.24 9 12C9 11.76 8.96 11.53 8.91 11.3L15.96 7.19C16.5 7.69 17.21 8 18 8C19.66 8 21 6.66 21 5C21 3.34 19.66 2 18 2C16.34 2 15 3.34 15 5C15 5.24 15.04 5.47 15.09 5.7L8.04 9.81C7.5 9.31 6.79 9 6 9C4.34 9 3 10.34 3 12C3 13.66 4.34 15 6 15C6.79 15 7.5 14.69 8.04 14.19L15.16 18.35C15.11 18.56 15.08 18.78 15.08 19C15.08 20.61 16.39 21.91 18 21.91C19.61 21.91 20.92 20.61 20.92 19C20.92 17.39 19.61 16.08 18 16.08Z" fill="currentColor"/>
                         </svg>
-                        <span>${post.shares}</span>
+                        <span>${shares}</span>
                     </button>
                 </div>
             </div>
@@ -106,25 +137,32 @@ const Feed = {
     },
 
     renderPostContent(post) {
+        // Support both Supabase format (content is string) and MockData format (content.text)
+        const content = typeof post.content === 'string' ? post.content : (post.content?.text || post.content?.transcription || post.content?.description || '');
+        const audioUrl = post.audio_url || post.content?.audioUrl;
+        const mediaUrl = post.media_url || post.content?.thumbnailUrl;
+
         switch (post.type) {
             case 'audio':
                 return `
-                    <div class="post-text">${post.content.transcription}</div>
-                    <div class="post-audio-container" id="post-audio-${post.id}"></div>
+                    <div class="post-text">${content}</div>
+                    ${audioUrl ? `<div class="post-audio-container" id="post-audio-${post.id}"></div>` : ''}
                 `;
 
             case 'video':
                 return `
-                    <div class="post-text">${post.content.description}</div>
-                    <div class="post-video-container">
-                        <img src="${post.content.thumbnailUrl}" class="post-video" alt="Video thumbnail">
-                    </div>
+                    <div class="post-text">${content}</div>
+                    ${mediaUrl ? `
+                        <div class="post-video-container">
+                            <img src="${mediaUrl}" class="post-video" alt="Video thumbnail" onerror="this.style.display='none'">
+                        </div>
+                    ` : ''}
                 `;
 
             case 'text':
             default:
                 return `
-                    <div class="post-text" id="post-text-${post.id}">${post.content.text}</div>
+                    <div class="post-text" id="post-text-${post.id}">${content}</div>
                     <button class="post-read-btn" data-post-id="${post.id}">
                         <svg viewBox="0 0 24 24" fill="none">
                             <path d="M3 9V15C3 16.1 3.9 17 5 17H7V21H9V17H15V21H17V17H19C20.1 17 21 16.1 21 15V9L12 2L3 9Z" fill="currentColor"/>

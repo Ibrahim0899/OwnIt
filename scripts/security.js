@@ -3,24 +3,33 @@
 // ====================================
 
 const Security = {
-    // Dynamic encryption key (session-specific, not hardcoded)
-    // The key is derived from a combination of factors for better security
-    _keyBase: 'OwnIt-2024',
-
+    // Secret key for encryption - dynamically generated per device
+    // This provides better security than a static key visible in source code
     get secretKey() {
-        // Generate a session-specific key using browser fingerprint + timestamp
-        const sessionId = sessionStorage.getItem('_sk') || this._generateSessionKey();
-        return this._keyBase + '-' + sessionId;
+        // Generate a device-specific key based on browser fingerprint
+        const deviceId = this._getDeviceFingerprint();
+        return `OwnIt-${deviceId}-${window.location.hostname}`;
     },
 
-    _generateSessionKey() {
-        const key = Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-        sessionStorage.setItem('_sk', key);
-        return key;
+    _getDeviceFingerprint() {
+        // Create a simple but unique device fingerprint
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.textBaseline = 'top';
+        ctx.font = '14px Arial';
+        ctx.fillText('OwnIt-Fingerprint', 2, 2);
+        const fingerprint = canvas.toDataURL().slice(-50);
+        return CryptoJS.SHA256(
+            navigator.userAgent +
+            navigator.language +
+            screen.colorDepth +
+            fingerprint
+        ).toString().substring(0, 16);
     },
 
-    // DEV MODE - MUST BE FALSE IN PRODUCTION
-    devMode: false,
+    // DEV MODE - Set to true to bypass authentication for testing
+    // WARNING: Set to false in production!
+    devMode: false,  // ✅ PRODUCTION MODE
 
     // Session configuration
     sessionTimeout: 24 * 60 * 60 * 1000, // 24 hours
@@ -111,7 +120,7 @@ const Security = {
      * Validate password strength
      */
     validatePasswordStrength(password) {
-        const minLength = 12;
+        const minLength = 8;
         const hasUpperCase = /[A-Z]/.test(password);
         const hasLowerCase = /[a-z]/.test(password);
         const hasNumbers = /\d/.test(password);
@@ -143,7 +152,7 @@ const Security = {
             score: strength,
             level,
             feedback,
-            isValid: strength >= 4
+            isValid: strength >= 3
         };
     },
 
@@ -206,15 +215,21 @@ const Security = {
             return true;
         }
 
+        // Check if we're on the auth page (supports both /auth and /auth.html)
+        const currentPath = window.location.pathname;
+        const isAuthPage = currentPath.includes('auth.html') ||
+            currentPath.endsWith('/auth') ||
+            currentPath.includes('/auth.html');
+
         const session = this.getSession();
 
-        if (!session && !window.location.pathname.includes('auth.html')) {
+        if (!session && !isAuthPage) {
             // Redirect to auth page if no session
             window.location.href = 'auth.html';
             return false;
         }
 
-        if (session && window.location.pathname.includes('auth.html')) {
+        if (session && isAuthPage) {
             // Redirect to app if already logged in
             window.location.href = 'index.html';
             return true;
@@ -317,36 +332,9 @@ const Security = {
      * Sanitize user input (XSS prevention)
      */
     sanitizeInput(input) {
-        if (typeof input !== 'string') return input;
         const div = document.createElement('div');
         div.textContent = input;
         return div.innerHTML;
-    },
-
-    /**
-     * Escape HTML entities for safe rendering
-     */
-    escapeHtml(str) {
-        if (typeof str !== 'string') return str;
-        const htmlEntities = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#x27;',
-            '/': '&#x2F;'
-        };
-        return str.replace(/[&<>"'/]/g, char => htmlEntities[char]);
-    },
-
-    /**
-     * Safe innerHTML setter - sanitizes content before insertion
-     */
-    safeSetHtml(element, html) {
-        // For trusted templates only - user data should use escapeHtml first
-        if (element) {
-            element.innerHTML = html;
-        }
     },
 
     /**
@@ -360,16 +348,6 @@ const Security = {
             inputs.forEach(input => {
                 input.value = this.sanitizeInput(input.value);
             });
-        });
-
-        // Also sanitize on paste events
-        document.addEventListener('paste', (e) => {
-            const target = e.target;
-            if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
-                setTimeout(() => {
-                    target.value = this.sanitizeInput(target.value);
-                }, 0);
-            }
         });
     },
 
@@ -461,11 +439,15 @@ const Security = {
 if (typeof window !== 'undefined') {
     window.Security = Security;
 
-    // Auto-init if not on auth page
-    if (!window.location.pathname.includes('auth.html')) {
+    // Auto-init if not on auth page (supports both /auth and /auth.html)
+    const currentPath = window.location.pathname;
+    const isAuthPage = currentPath.includes('auth.html') ||
+        currentPath.endsWith('/auth') ||
+        currentPath.includes('/auth.html');
+
+    if (!isAuthPage) {
         document.addEventListener('DOMContentLoaded', () => {
             Security.init();
         });
     }
 }
-// Cache bust: 1764987021

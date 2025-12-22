@@ -5,12 +5,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="OwnIt - Réseau social professionnel voice-first avec une touche africaine">
-    <!-- Content Security Policy -->
-    <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://*.supabase.co; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co;">
-    <title>OwnIt - Chaque voix porte une histoire</title>
-    <link rel="icon" type="image/png" href="assets/logo.png">
-    <link rel="apple-touch-icon" href="assets/logo.png">
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="apple-touch-icon" href="favicon.png">
+
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="OwnIt - Votre Histoire Professionnelle">
+    <meta property="og:description"
+        content="Réseau social professionnel voice-first. Racontez votre histoire avec votre voix.">
+    <meta property="og:image" content="favicon.png">
+
+    <title>OwnIt - Votre Histoire Professionnelle</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -201,6 +208,7 @@
     <script src="scripts/supabase-config.js"></script>
     <script src="scripts/database.js"></script>
     <script src="scripts/security.js?v=2"></script>
+    <script src="scripts/analytics.js"></script>
 
     <script src="scripts/utils.js"></script>
     <script src="scripts/ui-polish.js"></script>

@@ -111,6 +111,22 @@ CREATE TABLE IF NOT EXISTS messages (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- ========== SITE VISITS TABLE (Analytics) ==========
+CREATE TABLE IF NOT EXISTS site_visits (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    visitor_id TEXT NOT NULL,
+    page_url TEXT NOT NULL,
+    page_path TEXT NOT NULL,
+    referrer TEXT,
+    user_agent TEXT,
+    screen_width INTEGER,
+    screen_height INTEGER,
+    language TEXT,
+    timezone TEXT,
+    is_page_navigation BOOLEAN DEFAULT FALSE,
+    visited_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ========== INDEXES ==========
 CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
 CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
@@ -120,6 +136,8 @@ CREATE INDEX IF NOT EXISTS idx_connections_from_user ON connections(from_user_id
 CREATE INDEX IF NOT EXISTS idx_connections_to_user ON connections(to_user_id);
 CREATE INDEX IF NOT EXISTS idx_messages_conversation ON messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_messages_created_at ON messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_site_visits_visited_at ON site_visits(visited_at DESC);
+CREATE INDEX IF NOT EXISTS idx_site_visits_visitor_id ON site_visits(visitor_id);
 
 -- ========== RPC FUNCTIONS ==========
 CREATE OR REPLACE FUNCTION increment_likes(post_id UUID)
@@ -144,6 +162,7 @@ ALTER TABLE applications ENABLE ROW LEVEL SECURITY;
 ALTER TABLE connections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE site_visits ENABLE ROW LEVEL SECURITY;
 
 -- Policies for public read access (for demo)
 CREATE POLICY "Public read access" ON users FOR SELECT USING (true);
@@ -172,6 +191,9 @@ CREATE POLICY "Users can create conversations" ON conversations FOR INSERT WITH 
 
 CREATE POLICY "Users can view messages" ON messages FOR SELECT USING (true);
 CREATE POLICY "Users can send messages" ON messages FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Anyone can track visits" ON site_visits FOR INSERT WITH CHECK (true);
+CREATE POLICY "Public read visits" ON site_visits FOR SELECT USING (true);
 
 -- ========== SAMPLE DATA ==========
 -- Insert sample user
